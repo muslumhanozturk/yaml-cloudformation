@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  This temp launches an EC2 instance which enables SSH.
+Resources:
+  CFNInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-0715c1897453cabd1
+      InstanceType: t2.micro
+      KeyName: first-key-pair # Use your keypair name
+      SecurityGroups: 
+        - !Ref CFNSecGr
+      Tags: 
+        - Key: Name
+          Value: CFNInstance
+
+  CFNSecGr:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enables SSH. # Required
+      SecurityGroupIngress: 
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
