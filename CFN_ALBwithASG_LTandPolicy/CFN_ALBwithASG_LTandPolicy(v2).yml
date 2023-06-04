@@ -1,15 +1,14 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: |
   This handson shows how to create ASG with ELB and LT via CloudFormation template.
+
 Parameters:
   VPC:
-    Description: Choose one OF the VPC
-    Type: AWS::EC2::VPC::Id
-
+    Description: Choose one of the VPC
+    Type: AWS::EC2::VPC::Id 
   Subnets:
     Description: Choose at least 2 subnets
-    Type: List<AWS::EC2::Subnet::Id> #AWS::EC2::Subnet::Id
-
+    Type: List<AWS::EC2::Subnet::Id>  # or AWS::EC2::Subnet::Id (subnetler liste olm. için tek seçim hakkı)
   EnvParameter:
     Description: Choose the environment type
     Type: String
@@ -26,8 +25,8 @@ Parameters:
          - t2.nano
   MyKeyPair:
     Description: Choose your Keyname
-    Type: AWS::EC2::KeyPair::KeyName  #bütün keypair leri listeler
-  
+    Type: AWS::EC2::KeyPair::KeyName
+
 Mappings:
   RegionImageMap:
     us-east-1:
@@ -45,8 +44,8 @@ Mappings:
     eu-west-1:
       prod: ami-04f7efe62f419d9f5
       test: ami-0e23c576dacf2e3df
-
   
+
 Resources:
   MyASGPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
@@ -54,7 +53,7 @@ Resources:
       AutoScalingGroupName: !Ref MyASG # Required
       PolicyType: TargetTrackingScaling
       TargetTrackingConfiguration:
-        PredefinedMetricSpecification:
+        PredefinedMetricSpecification: 
           PredefinedMetricType: ASGAverageCPUUtilization
         TargetValue: 60.0
   MyASG:
@@ -65,41 +64,43 @@ Resources:
       HealthCheckType: ELB
       LaunchTemplate:
         LaunchTemplateId: !Ref MyLT
-        Version: 1
+        Version: !GetAtt MyLT.LatestVersionNumber # 1 or !GetAtt MyLT.LatestVersionNumber
       MaxSize: 4 # Required
       MinSize: 1 # Required
       TargetGroupARNs: 
-        - !Ref MyTargetGrp # !GetAtt MyTargetGrp,TargetGroupArn
-      VPCZoneIdentifier: !Ref Subnets
+        - !GetAtt MyTargetGrp.TargetGroupArn # !Ref MyTargetGrp or !GetAtt MyTargetGrp.TargetGroupArn
+      VPCZoneIdentifier: !Ref Subnets  # deneme olmuyor :) !Ref VPC
   MyListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions: # Required
-        - TargetGroupArn: !Ref MyTargetGrp # !GetAtt MyTargetGrp,TargetGroupArn
-          Type: forward
+       - TargetGroupArn: !Ref MyTargetGrp
+         Type: forward
       LoadBalancerArn: !Ref MyELB # Required
       Port: 80
       Protocol: HTTP
   MyELB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
+      IpAddressType: ipv4
       Name: muslumelbcfn
+      Scheme: internet-facing
       SecurityGroups: 
-        - !GetAtt MySecGrp.GroupId # or !Ref MySecGrp
-      Subnets: !Ref Subnets  # seçtiğimiz zaten list olursa list içinde list olmaz
+        - !Ref MySecGrp  #!GetAtt MySecGrp.GroupId or !Ref MySecGrp
+      Subnets: !Ref Subnets   # no try !GetAtt Subnets.SubnetId
       Type: application
   MyLT:
     Type: AWS::EC2::LaunchTemplate
     Properties:
       LaunchTemplateData:
-        ImageId: !FindInMap
+        ImageId: !FindInMap 
           - RegionImageMap
           - !Ref "AWS::Region"
           - !Ref EnvParameter
         InstanceType: !Ref InstanceType
         KeyName: !Ref MyKeyPair
         SecurityGroupIds:
-          - !GetAtt MySecGrp.GroupId # or !Ref MySecGrp
+          - !GetAtt MySecGrp.GroupId
         UserData: !Base64 |
           #!/bin/bash
           #update os
@@ -139,6 +140,8 @@ Resources:
     Properties:
       HealthCheckIntervalSeconds: 10
       HealthCheckPath: /
+      HealthCheckPort: traffic-port
+      HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 3
       IpAddressType: ipv4
@@ -146,24 +149,27 @@ Resources:
       Port: 80
       Protocol: HTTP
       UnhealthyThresholdCount: 2
-      VpcId: !Ref VPC #Sonra yazacağız
+      VpcId: !Ref VPC
   MySecGrp:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: SSH and HTTP # Required
-      GroupName: muslumsecgrpcfn
+      GroupName: "muslumsecgrpcfn"
       SecurityGroupIngress: 
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
-      VpcId: !Ref VPC #Sonra yazacağız.
-
+       - IpProtocol: tcp
+         FromPort: 22
+         ToPort: 22
+         CidrIp: 0.0.0.0/0
+       - IpProtocol: tcp
+         FromPort: 80
+         ToPort: 80
+         CidrIp: 0.0.0.0/0
+      Tags: 
+        - Key: Name
+          Value: TestSecGrp
+      VpcId: !Ref VPC  # no try !GetAtt VPC.VpcId
   
+
 Outputs:
   DNScfn:
     Description: DNS of ELB
