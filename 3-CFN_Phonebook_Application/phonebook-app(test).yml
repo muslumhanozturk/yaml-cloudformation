@@ -61,7 +61,7 @@ Resources:
           - ResourceType: instance
             Tags: 
               - Key: Name
-                Value: !Sub Web Server of ${AWS::StackName} Stack
+                Value: !Sub Web Server of ${AWS::StackName} Stack  #oluşan instancelerin isimi
         UserData:   
           Fn::Base64:  # metni Base64 kodlamasına dönüştürmek için kullanılır.
             !Sub       # !Sub işlevi, metindeki ${MyDBURI} ifadesini !GetAtt DBInstance.Endpoint.Address değeriyle değiştirir.
