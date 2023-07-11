@@ -1,0 +1,153 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: |
+  This template is for three instances and route-53 geo-location policy
+Parameters:
+  
+  HostedZone:
+    Description: Select a hosted zone
+    Type: AWS::Route53::HostedZone::Id
+
+  KeyName:
+    Description: Select a key-pair
+    Type: AWS::EC2::KeyPair::KeyName
+  
+  InstanceType:
+    Description: Select a instance-type for your instance
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t3.micro
+    
+  VPC:
+    Description: Select a VPC for your resources
+    Type: AWS::EC2::VPC::Id
+
+  
+Resources:
+  
+  GeoDefault:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      GeoLocation:
+         ContinentCode: "NA"  #North America
+      HostedZoneId: !Ref HostedZone
+      Name: "www.muslumhanozturk.com" # Required
+      ResourceRecords: 
+        - !GetAtt InstanceNV.PublicIp
+      SetIdentifier: Default
+      TTL: "60"
+      Type: "A" # Required
+
+  GeoEuropa:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      GeoLocation:
+         ContinentCode: "EU"  # EU: Europe
+      HostedZoneId: !Ref HostedZone
+      Name: "www.muslumhanozturk.com" # Required
+      ResourceRecords: 
+        - !GetAtt InstanceEuropa.PublicIp
+      SetIdentifier: Europa
+      TTL: "60"
+      Type: "A" # Required
+  
+  GeoJapan:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      GeoLocation:
+        CountryCode: "*"
+      HostedZoneId: !Ref HostedZone
+      Name: "www.muslumhanozturk.com" # Required
+      ResourceRecords: 
+        - !GetAtt InstanceAsia.PublicIp
+      SetIdentifier: Asia
+      TTL: "60"
+      Type: "A" # Required
+  
+  InstanceAsia:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: "us-east-1a"
+      ImageId: ami-06ca3ca175f37dd66
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SecurityGroupIds: 
+        - !Ref InstanceSecGroup
+      Tags: 
+        - Key: Name
+          Value: Asia
+      UserData: !Base64 |
+        #!/bin/bash
+        yum update -y
+        yum install -y httpd
+        yum install -y wget
+        cd /var/www/html
+        wget https://raw.githubusercontent.com/awsdevopsteam/route-53/master/geo-japon/index.html
+        wget https://raw.githubusercontent.com/awsdevopsteam/route-53/master/geo-japon/Tsubasa.jpg
+        systemctl start httpd
+        systemctl enable httpd
+  
+  InstanceEuropa:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: "us-east-1a"
+      ImageId: ami-06ca3ca175f37dd66
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SecurityGroupIds: 
+        - !Ref InstanceSecGroup
+      Tags: 
+        - Key: Name
+          Value: Europa
+      UserData: !Base64 |
+        #!/bin/bash
+        yum update -y
+        yum install -y httpd
+        yum install -y wget
+        cd /var/www/html
+        wget https://raw.githubusercontent.com/awsdevopsteam/route-53/master/frankfurt/index.html
+        wget https://raw.githubusercontent.com/awsdevopsteam/route-53/master/frankfurt/frankfurt.jpg
+        systemctl start httpd
+        systemctl enable httpd
+  
+  InstanceNV:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: "us-east-1a"
+      ImageId: ami-06ca3ca175f37dd66
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SecurityGroupIds: 
+        - !Ref InstanceSecGroup
+      Tags: 
+        - Key: Name
+          Value: N-Virginia
+      UserData: !Base64 |
+        #!/bin/bash
+        yum update -y
+        yum install -y httpd
+        yum install -y wget
+        cd /var/www/html
+        wget https://raw.githubusercontent.com/awsdevopsteam/route-53/master/N.virginia_1/index.html
+        wget https://raw.githubusercontent.com/awsdevopsteam/route-53/master/N.virginia_1/N.virginia_1.jpg
+        systemctl start httpd
+        systemctl enable httpd
+
+  InstanceSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: We enabled 80 port 443. # Required
+      GroupName: Route53-Instance-Sec-Group
+      SecurityGroupIngress: 
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VPC
+  
