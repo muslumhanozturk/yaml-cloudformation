@@ -1,0 +1,12 @@
+WebSiteCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref FQDN
+      DomainValidationOptions:
+        - DomainName: !Ref FQDN
+          HostedZoneId: !Ref DomainName
+      ValidationMethod: DNS
+
+ViewerCertificate:
+          AcmCertificateArn: !Ref WebSiteCertificate
+          SslSupportMethod: sni-only
